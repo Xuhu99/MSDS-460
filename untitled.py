@@ -1,7 +1,8 @@
+import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# Step 1: Define the graph edges with weights (in miles, dollars, or minutes)
+# Define the graph edges with weights (miles, costs, or minutes)
 edges = [
     ('Origin', 'A', 40), ('Origin', 'B', 60), ('Origin', 'C', 50),
     ('A', 'B', 10), ('A', 'D', 70),
@@ -11,42 +12,38 @@ edges = [
     ('E', 'Destination', 80)
 ]
 
-# Step 2: Create a directed graph
+# Create a directed graph
 G = nx.DiGraph()
 G.add_weighted_edges_from(edges)
 
-# Step 3: Display the graph visually
-def draw_graph(graph):
+# UI Title
+st.title("🚗 Shortest Path Finder (Dijkstra's Algorithm)")
+
+# Let user choose start and end nodes
+start_node = st.selectbox("Select Start Node", options=G.nodes, index=0)
+end_node = st.selectbox("Select End Node", options=G.nodes, index=len(G.nodes) - 1)
+
+# Draw graph
+def draw_graph(graph, path=None):
     pos = nx.spring_layout(graph, seed=42)
     plt.figure(figsize=(12, 8))
-    nx.draw(graph, pos, with_labels=True, node_color='lightblue', node_size=3000, font_size=10)
+    edge_colors = ['red' if path and (u, v) in zip(path, path[1:]) else 'gray' for u, v in graph.edges()]
+    nx.draw(graph, pos, with_labels=True, node_color='lightblue', node_size=3000, font_size=10, edge_color=edge_colors, width=2)
     labels = nx.get_edge_attributes(graph, 'weight')
     nx.draw_networkx_edge_labels(graph, pos, edge_labels=labels)
-    plt.title("Town Network with Distances")
-    plt.show()
+    st.pyplot(plt)
 
-# Step 4: Compute the shortest path
-def find_shortest_path(graph, start, end):
+# On button click, calculate path
+if st.button("Find Shortest Path"):
     try:
-        path = nx.dijkstra_path(graph, start, end)
-        length = nx.dijkstra_path_length(graph, start, end)
-        return path, length
+        path = nx.dijkstra_path(G, start_node, end_node)
+        total = nx.dijkstra_path_length(G, start_node, end_node)
+        st.success(f"Shortest Path: {' → '.join(path)}")
+        st.info(f"Total Distance: {total} miles")
+        st.info(f"Cost: ${total}")
+        st.info(f"Time: {total} minutes")
+        draw_graph(G, path)
     except nx.NetworkXNoPath:
-        return None, float('inf')
-
-# MAIN EXECUTION
-if __name__ == "__main__":
+        st.error("No path found between selected nodes.")
+else:
     draw_graph(G)
-
-    start_node = 'Origin'
-    end_node = 'Destination'
-
-    path, total_distance = find_shortest_path(G, start_node, end_node)
-
-    if path:
-        print("Shortest path:", " → ".join(path))
-        print("Total distance:", total_distance, "miles")
-        print("Interpreted as cost: $", total_distance)
-        print("Interpreted as time: ", total_distance, "minutes")
-    else:
-        print(f"No path found from {start_node} to {end_node}.")
